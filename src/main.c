@@ -91,15 +91,11 @@ int main() {
 	sfRectangleShape_setSize(tile_rect, player_size);
 	sfRectangleShape_setFillColor(tile_rect, sfBlue);
 
-	printf("%d\n", MAP_SIZE);
-
 	clock = sfClock_create();
     while(sfRenderWindow_isOpen(render_window)) {
 		uint16 x, y;
 
         time_delta = sfTime_asSeconds(sfClock_restart(clock));
-
-		is_grounded = (player_pos.y >= FLOOR_HEIGHT);
 
         /* polling */
         while(sfRenderWindow_pollEvent(render_window, &e)) {
@@ -135,7 +131,6 @@ int main() {
 
 		max_vel = VEL_LIMIT * (1 + (is_running * 0.5f));
 		jump_vel = BASE_JUMP_VEL * (1 + (fabs(player_vel.x) * JUMP_VEL_INFLUENCE));
-		printf("%f\n", fabs(player_vel.x));
 
 		/* updating */
 		player_accel = sfVector2f_zero();
@@ -155,16 +150,6 @@ int main() {
 			player_vel.x = player_vel.x - ((player_vel.x) * DECCEL_RATE * (float32)time_delta);
 		}
 
-		if(is_grounded) {
-			player_pos.y = FLOOR_HEIGHT;
-			player_vel.y = 0.0f;
-			if(should_jump)
-				player_vel.y = -jump_vel;
-		}
-
-		if(!is_grounded)
-			should_jump = 0;
-
 		player_pos = sfVector2f_add(player_pos, sfVector2f_scale(player_vel, (float32)time_delta));
 
 		if(player_pos.x < 0.0f) {
@@ -180,6 +165,17 @@ int main() {
 		if(player_pos.y < 0.0f) {
 			player_pos.y = 0.0f;
 			player_vel.y = (-player_vel.y * 0.5f);
+		}
+
+		is_grounded = player_pos.y >= FLOOR_HEIGHT;
+		if(is_grounded) {
+			player_vel.y = 0.0f;
+			if(should_jump)
+				player_vel.y = -jump_vel;
+			else
+				player_pos.y = FLOOR_HEIGHT;
+		} else {
+			should_jump = 0;
 		}
 
 		sfRectangleShape_setPosition(player_rect, player_pos);
@@ -201,7 +197,7 @@ int main() {
 		sfRenderWindow_drawRectangleShape(render_window, player_rect, NULL);
 		sfRenderWindow_display(render_window);
 
-		/* printf("%f\n", 1.0 / time_delta); */
+		printf("%f\n", 1.0 / time_delta);
     }
 
 	sfRenderWindow_destroy(render_window);
