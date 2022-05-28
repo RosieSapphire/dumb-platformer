@@ -1,1 +1,1 @@
-This is just a dumb platformer test I'm making with SDL2.
+This is just a dumb platformer test I'm making with SFML.

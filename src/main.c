@@ -1,14 +1,11 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_keyboard.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_scancode.h>
 #include <stdio.h>
+#include <SFML/Graphics.h>
 
 #include "vec2.h"
 
 #define WINDOW_WIDTH        1280.0f
 #define WINDOW_HEIGHT       720.0f
-#define WINDOW_TITLE        "Platformer - SDL2"
+#define WINDOW_TITLE        "Platformer - SFML"
 
 #define ACCEL_RATE			0.6f * 5200.0f
 #define DECCEL_RATE			18.0f
@@ -25,26 +22,23 @@
 #define MAP_SIZE			MAP_WIDTH * MAP_HEIGHT
 
 int main() {
-	uint32 i;
+	sfVideoMode video_mode;
+	sfRenderWindow *render_window;
+	sfEvent e;
 
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Event e;
-
-	Vec2 player_pos;
-	Vec2 player_vel;
-	Vec2 player_accel;
-	Vec2 player_size;
+	sfVector2f player_pos;
+	sfVector2f player_vel;
+	sfVector2f player_accel;
+	sfVector2f player_size;
 	float32 max_vel = VEL_LIMIT;
 	float32 jump_vel = BASE_JUMP_VEL;
-	SDL_FRect player_rect;
+	sfRectangleShape *player_rect;
 
-	float64 time_delta;
-    float64 time_now;
-    float64 time_last;
-    boolean window_should_close = 0;
+	sfRectangleShape *tile_rect;
 
-	const uint8 *keyboard_state;
+	sfClock *clock;
+	float32 time_delta;
+
 	boolean move_left;
 	boolean move_right;
 	boolean is_grounded = 0;
@@ -76,50 +70,51 @@ int main() {
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	};
 
-	window = SDL_CreateWindow(WINDOW_TITLE,
-							  SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-						   	  WINDOW_WIDTH, WINDOW_HEIGHT, 0);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	video_mode.width = WINDOW_WIDTH;
+	video_mode.height = WINDOW_HEIGHT;
+	video_mode.bitsPerPixel = 24;
+	render_window = sfRenderWindow_create(video_mode, WINDOW_TITLE, sfClose, NULL);
 
-	player_pos = vec2_new(64.0f, 64.0f);
-	player_vel = vec2_zero();
-	player_accel = vec2_zero();
-	player_size = vec2_new(PLAYER_SIZE, PLAYER_SIZE);
+	player_pos = sfVector2f_new(64.0f, 64.0f);
+	player_vel = sfVector2f_zero();
+	player_accel = sfVector2f_zero();
+	player_size = sfVector2f_new(PLAYER_SIZE, PLAYER_SIZE);
 
-	player_rect.x = player_pos.x;
-	player_rect.y = player_pos.y;
-	player_rect.w = player_size.x;
-	player_rect.h = player_size.y;
+	player_rect = sfRectangleShape_create();
+	sfRectangleShape_setPosition(player_rect, player_pos);
+	sfRectangleShape_setSize(player_rect, player_size);
+	sfRectangleShape_setFillColor(player_rect, sfGreen);
+
+	tile_rect = sfRectangleShape_create();
+	sfRectangleShape_setSize(tile_rect, player_size);
+	sfRectangleShape_setFillColor(tile_rect, sfBlue);
 
 	printf("%d\n", MAP_SIZE);
 
-    SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-	time_last = (float64)SDL_GetPerformanceCounter() / (float64)SDL_GetPerformanceFrequency();
-    while(!window_should_close) {
+	clock = sfClock_create();
+    while(sfRenderWindow_isOpen(render_window)) {
 		uint16 x, y;
 
-        time_now = (float64)SDL_GetPerformanceCounter() / (float64)SDL_GetPerformanceFrequency();
-        time_delta = time_now - time_last;
-        time_last = time_now;
+        time_delta = sfTime_asSeconds(sfClock_restart(clock));
 
 		is_grounded = (player_pos.y >= FLOOR_HEIGHT);
 
         /* polling */
-        while(SDL_PollEvent(&e)) {
+        while(sfRenderWindow_pollEvent(render_window, &e)) {
             switch(e.type) {
-                case SDL_WINDOWEVENT_CLOSE:
-					window_should_close = 1;
+                case sfEvtClosed:
+					sfRenderWindow_close(render_window);
                 break;
 
-                case SDL_KEYDOWN:
-					switch(e.key.keysym.sym) {
-						case SDLK_ESCAPE:
-							window_should_close = 1;
+                case sfEvtKeyPressed:
+					switch(e.key.code) {
+						case sfKeyQ:
+						case sfKeyEscape:
+							sfRenderWindow_close(render_window);
 						break;
 
 							/* TODO: Fix jumping button from looping */
-						case SDLK_SPACE:
+						case sfKeySpace:
 							if(is_grounded && !should_jump)
 								should_jump = 1;
 						break;
@@ -128,27 +123,24 @@ int main() {
 					}
                 break;
 
-                case SDL_QUIT:
-					window_should_close = 1;
-                break;
+				default: break;
             }
         }
 
-		keyboard_state = SDL_GetKeyboardState(NULL);
-		move_left = keyboard_state[SDL_SCANCODE_D];
-		move_right = keyboard_state[SDL_SCANCODE_A];
+		move_left = sfKeyboard_isKeyPressed(sfKeyD);
+		move_right = sfKeyboard_isKeyPressed(sfKeyA);
+		is_running = sfKeyboard_isKeyPressed(sfKeyLShift);
 
-		is_running = keyboard_state[SDL_SCANCODE_LSHIFT];
 		max_vel = VEL_LIMIT * (1 + (is_running * 0.5f));
 		jump_vel = BASE_JUMP_VEL * (1 + (is_running * 0.5f));
 
 		/* updating */
-		player_accel = vec2_zero();
+		player_accel = sfVector2f_zero();
 		player_accel.x += (float32)move_left * ACCEL_RATE * (float32)time_delta;
 		player_accel.x -= (float32)move_right * ACCEL_RATE * (float32)time_delta;
 		player_accel.y = GRAVITY * (float32)time_delta;
 
-		player_vel = vec2_add(player_vel, player_accel);
+		player_vel = sfVector2f_add(player_vel, player_accel);
 
 		if(player_vel.x > max_vel)
 			player_vel.x = max_vel;
@@ -170,7 +162,7 @@ int main() {
 		if(!is_grounded)
 			should_jump = 0;
 
-		player_pos = vec2_add(player_pos, vec2_scale(player_vel, (float32)time_delta));
+		player_pos = sfVector2f_add(player_pos, sfVector2f_scale(player_vel, (float32)time_delta));
 
 		if(player_pos.x < 0.0f) {
 			player_pos.x = 0.0f;
@@ -187,47 +179,32 @@ int main() {
 			player_vel.y = (-player_vel.y * 0.5f);
 		}
 
-		player_rect.x = player_pos.x;
-		player_rect.y = player_pos.y;
+		sfRectangleShape_setPosition(player_rect, player_pos);
 
         /* drawing */
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-        SDL_RenderClear(renderer);
+		sfRenderWindow_clear(render_window, sfBlack);
 
-        SDL_SetRenderDrawColor(renderer, 0x11, 0x11, 0x11, 0xFF);
 		for(y = 0; y < MAP_HEIGHT; y++) {
 			for(x = 0; x < MAP_WIDTH; x++) {
-				SDL_Rect tile;
-				SDL_Rect tile_b;
-				tile.x = x * player_size.x;
-				tile.y = y * player_size.y;
-				tile.w = player_size.x;
-				tile.h = player_size.y;
-				tile_b.x = x * player_size.x;
-				tile_b.y = y * player_size.y;
-				tile_b.w = player_size.x;
-				tile_b.h = player_size.y;
+				sfVector2f tile_pos;
+				tile_pos = sfVector2f_new(x * player_size.x, y * player_size.y);
+				sfRectangleShape_setPosition(tile_rect, tile_pos);
 				if(map[y * MAP_WIDTH + x])
-					SDL_RenderFillRect(renderer, &tile);
-
+					sfRenderWindow_drawRectangleShape(render_window, tile_rect, NULL);
 			}
 		}
 
 		/* TODO: Add collision with the tiles */
-		map[((uint32)player_pos.y / MAP_HEIGHT) * MAP_WIDTH + ((uint32)player_pos.x / MAP_WIDTH)] = 1;
-
-        SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0x00, 0xFF);
-		SDL_RenderFillRectF(renderer, &player_rect);
-
-
-        SDL_RenderPresent(renderer);
+		sfRenderWindow_drawRectangleShape(render_window, player_rect, NULL);
+		sfRenderWindow_display(render_window);
 
 		/* printf("%f\n", 1.0 / time_delta); */
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+	sfRenderWindow_destroy(render_window);
+	sfRectangleShape_destroy(player_rect);
+	sfRectangleShape_destroy(tile_rect);
+	sfClock_destroy(clock);
 
     return 0;
 }

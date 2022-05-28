@@ -1,6 +1,6 @@
 CC=gcc
 INCDIRS=-I./include/ -I/usr/include/
-LIBS=-lm -lSDL2
+LIBS=-lm -lcsfml-system -lcsfml-window -lcsfml-graphics
 
 OPT_DEBUG=-O0
 CFLAGS_DEBUG=-Wall -Wextra -Werror -ansi -pedantic -g3 $(INCDIRS) $(OPT_DEBUG)
@@ -11,8 +11,8 @@ CFLAGS_RELEASE=-ansi -pedantic $(INCDIRS) $(OPT_RELEASE)
 CFILES=main.c vec2.c
 OBJECTS=obj/main.o obj/vec2.o
 
-BINARY_RELEASE=sdl2
-BINARY_DEBUG=sdl2-d
+BINARY_RELEASE=platformer
+BINARY_DEBUG=platformer-d
 
 all: $(BINARY_RELEASE)
 release: $(BINARY_RELEASE)
