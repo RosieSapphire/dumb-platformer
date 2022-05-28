@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <SFML/Graphics.h>
 
 #include "vec2.h"
@@ -16,6 +17,7 @@
 
 #define VEL_LIMIT			1024.0f
 #define BASE_JUMP_VEL		1024.0f
+#define JUMP_VEL_INFLUENCE	0.0004f
 
 #define MAP_WIDTH			((uint32)WINDOW_WIDTH / (uint32)PLAYER_SIZE)
 #define MAP_HEIGHT			((uint32)WINDOW_HEIGHT / (uint32)PLAYER_SIZE)
@@ -132,7 +134,8 @@ int main() {
 		is_running = sfKeyboard_isKeyPressed(sfKeyLShift);
 
 		max_vel = VEL_LIMIT * (1 + (is_running * 0.5f));
-		jump_vel = BASE_JUMP_VEL * (1 + (is_running * 0.5f));
+		jump_vel = BASE_JUMP_VEL * (1 + (fabs(player_vel.x) * JUMP_VEL_INFLUENCE));
+		printf("%f\n", fabs(player_vel.x));
 
 		/* updating */
 		player_accel = sfVector2f_zero();
